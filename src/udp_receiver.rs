@@ -1,19 +1,31 @@
 use std::net::UdpSocket;
-// use std::time::Duration;
 
 fn main() {
     let mut args = std::env::args();
-    let recv_addr = args.nth(1).expect("sender address expected");
+    let recv_addr = args.nth(1).expect("receiver address expected");
 
-    let sender = UdpSocket::bind(recv_addr).unwrap();
-    for _ in 0..10000u32 {
-        // std::thread::sleep(Duration::from_secs_f32(0.1));
-        let mut buf = [0; 4];
-        let (red, send_addr) = sender.recv_from(&mut buf).unwrap();
-        println!("Received {red} bytes");
+    let receiver = UdpSocket::bind(&recv_addr).unwrap();
+    
+    let mut expected_number = 0u64;
 
-        let num = [buf[0], buf[1], 0, 0];
-        let number = u32::from_le_bytes(num);
-        println!("Received {number} from {send_addr}");
+    for _ in 0..100_000_000_000u64 {
+        let mut buf = [0; 8];
+        match receiver.recv_from(&mut buf) {
+            Ok((_red, _send_addr)) => {
+                let received_number = u64::from_le_bytes(buf);
+                
+                if received_number != expected_number {
+                    println!("Missed packet! Expected: {}, Received: {}", expected_number, received_number);
+                    expected_number = received_number + 1;  // Adjust the expected number based on the packet received
+                } else {
+                    expected_number += 1;
+                }
+
+                // println!("Received {} from {}", received_number, send_addr);
+            }
+            Err(e) => {
+                eprintln!("Error while receiving: {}", e);
+            }
+        }
     }
 }
