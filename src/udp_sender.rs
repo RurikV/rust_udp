@@ -10,9 +10,14 @@ fn main() {
     let sender = UdpSocket::bind(&send_addr).unwrap();
 
     for i in 0..100_000_000_000u64 {
-        match sender.send_to(&i.to_le_bytes(), &recv_addr) {
-            Ok(_) => {
-                // add logging for every sent packet here if necessary
+        let mut packet = [0; 1024];
+        packet[0..8].copy_from_slice(&i.to_le_bytes());
+
+        match sender.send_to(&packet[..], &recv_addr){
+            Ok(bytes_sent) => {
+                if bytes_sent != 1024 {
+                    eprintln!("Warning: Sent {} bytes instead of 1024 bytes!", bytes_sent);
+                }
             }
             Err(e) => {
                 eprintln!("Failed to send packet {}: {}", i, e);
